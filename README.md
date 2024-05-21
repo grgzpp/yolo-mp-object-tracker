@@ -4,13 +4,13 @@
   <img src="./videos/object_tracker.gif" alt="animated" />
 </p>
 
-This object tracker provides functionality to track objects detected by the [YOLO](https://docs.ultralytics.com) object detection system, combined with information provided by the [MediaPipe hand tracker](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker). The main focus of the tracker is objects held in the hand, with specific logic to manage their state, even if they are hidden by the hand. The tracker maintains a list of active and expired objects, and updates their state based on visibility, movement, and whether they are held in the hand.
+This object tracker provides functionality to track objects detected by the [YOLO](https://docs.ultralytics.com) object detection system, combined with information provided by the [MediaPipe hand tracker](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker). The main focus of the tracker is objects held in the hand, with specific logic to manage their state, even if they are hidden by the hand. The tracker maintains a list of active and expired objects, and updates their state based on visibility, movement, and whether they are held in the hand. Objects presumably in hand continue to be tracked even though they are not actually visible to YOLO.
 
 The tracker is inspired by [BoT-SORT](https://github.com/NirAharon/BoT-SORT) and [ByteTrack](https://github.com/ifzhang/ByteTrack), which are directly usable with YOLO with the [Ultralytics](https://docs.ultralytics.com/modes/track/) library. The structure is simplified compared to these. The distinguishing feature is the implementation of hand tracking with MediaPipe and all the hand-held object tracking logic.
 
 ## Features
 
-- Tracks objects detected by YOLO, associating each of them with an id.
+- Tracks objects detected by YOLO, associating each of them with a unique ID.
 - Associates objects with detected hand positions using MediaPipe to determine which object is being held in the hand.
 - Maintains persistence of tracked objects across frames.
 - Manages the state of objects being held or moved by hands.
@@ -91,7 +91,13 @@ left_hand_tracked_object = object_tracker.left_hand_tracked_object
 - `EXPIRATION_FRAMES_PATIENCE`: Number of frames after which an unseen object expires.
 - `PATIENT_COEFFICIENT_NOT_SEEN_IN_HAND`: Coefficient for patience when objects are not seen but are supposed in hand.
 - `STABLE_IN_HAND_FRAMES_PATIENCE`: Number of frames to confirm stable objects in hand.
-
+#####
+- `right_hand_tracked_object`: The tracked object in the right hand. *None* if the right hand is empty.
+- `left_hand_tracked_object`: The tracked object in the left hand. *None* if the left hand is empty.
+#####
+- `register_seen_objects(self, seen_yolo_objects, tips_midpoints)`: Registers seen objects and updates tracked objects.
+- `increment_frame_index(self)`: Increments the frame index and checks for false seen and expired objects.
+- `get_tracked_object_by_id(self, tracker_id)`: Returns the tracked object with the specified tracker ID.
 
 ### TrackedObject
 
