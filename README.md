@@ -20,15 +20,16 @@ The tracker is inspired by [BoT-SORT](https://github.com/NirAharon/BoT-SORT) and
 
 To use the `ObjectTracker`, you need to have the following dependencies installed:
 
-- `numpy`
 - YOLO object detection implementation
 - MediaPipe hand tracking implementation
 
-You can install `numpy` using pip:
+You can install this package with default parameters using pip:
 
 ```bash
-pip install numpy
+pip install git+https://github.com/grgzpp/yolo-mp-object-tracker
 ```
+
+or clone the repository into your working directory, adjust the parameters, and import it into your project.
 
 ## Usage
 
@@ -95,9 +96,9 @@ left_hand_tracked_object = object_tracker.left_hand_tracked_object
 - `right_hand_tracked_object`: The tracked object in the right hand. *None* if the right hand is empty.
 - `left_hand_tracked_object`: The tracked object in the left hand. *None* if the left hand is empty.
 #####
-- `register_seen_objects(self, seen_yolo_objects, tips_midpoints)`: Registers seen objects and updates tracked objects.
-- `increment_frame_index(self)`: Increments the frame index and checks for false seen and expired objects.
-- `get_tracked_object_by_id(self, tracker_id)`: Returns the tracked object with the specified tracker ID.
+- `register_seen_objects(seen_yolo_objects, tips_midpoints)`: Registers seen objects and updates tracked objects.
+- `increment_frame_index()`: Increments the frame index and checks for false seen and expired objects.
+- `get_tracked_object_by_id(tracker_id)`: Returns the tracked object with the specified tracker ID.
 
 ### TrackedObject
 
@@ -120,8 +121,9 @@ left_hand_tracked_object = object_tracker.left_hand_tracked_object
 - `right_hand_landmarks`: List of landmarks for the right hand.
 - `left_hand_landmarks`: List of landmarks for the left hand.
 #####
-- `register_hands_landmarks(self, right_hand_landmarks, left_hand_landmarks)`: Registers the landmarks for both hands.
-- `get_tips_midpoints(self)`: Returns the midpoints of the thumb and index finger tips for both hands.
+- `register_hands_landmarks(right_hand_landmarks, left_hand_landmarks)`: Registers the landmarks for both hands.
+- `get_tips_midpoints()`: Returns the midpoints of the thumb and index finger tips for both hands.
+- `get_hand_centers()`: Returns the center points for both hands.
 
 ## Example
 
