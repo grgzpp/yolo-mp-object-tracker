@@ -63,6 +63,16 @@ Increment the frame index to keep track of the frame count and handle expiration
 object_tracker.increment_frame_index()
 ```
 
+### Force object in hand
+
+Force a tracked object in a specific hand (for robot interaction):
+
+```python
+# hand_index: 0 = right, 1 = left
+# reference_tracked_object: tracked object to be forced in hand
+force_object_in_hand(hand_index, reference_tracked_object):
+```
+
 ### Get Tracked Object by ID
 
 Retrieve a tracked object by its unique tracker ID:
@@ -87,7 +97,7 @@ left_hand_tracked_object = object_tracker.left_hand_tracked_object
 
 - `MOVING_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for detecting movement, as a percentage of image width.
 - `IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for detecting objects in hand, as a percentage of image width.
-- `IN_HAND_HIDDEN_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for detecting hidden objects in hand, as a percentage of image width.
+- `BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for tracking back object after being hidden by the hand manipulating it, as a percentage of image width.
 - `FALSE_SEEN_FRAMES_PATIENCE`: Number of frames to persist objects seen falsely.
 - `EXPIRATION_FRAMES_PATIENCE`: Number of frames after which an unseen object expires.
 - `PATIENT_COEFFICIENT_NOT_SEEN_IN_HAND`: Coefficient for patience when objects are not seen but are supposed in hand.
@@ -98,6 +108,7 @@ left_hand_tracked_object = object_tracker.left_hand_tracked_object
 #####
 - `register_seen_objects(seen_yolo_objects, tips_midpoints)`: Registers seen objects and updates tracked objects.
 - `increment_frame_index()`: Increments the frame index and checks for false seen and expired objects.
+- `force_object_in_hand(hand_index, reference_tracked_object)`: Force a tracked object in a specific hand (for robot interaction).
 - `get_tracked_object_by_id(tracker_id)`: Returns the tracked object with the specified tracker ID.
 
 ### TrackedObject
@@ -172,6 +183,9 @@ while True:
 	# Get objects held in hands
 	right_hand_tracked_object = object_tracker.right_hand_tracked_object
 	left_hand_tracked_object = object_tracker.left_hand_tracked_object
+
+	# Force a tracked object in hand
+	object_tracker.force_object_in_hand(0, tracked_object)
 
 	# Implement your logic with tracked objects
 ```

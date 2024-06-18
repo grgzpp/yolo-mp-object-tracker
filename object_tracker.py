@@ -5,7 +5,7 @@ from tracked_object import TrackedObject
 class ObjectTracker:
     MOVING_DISTANCE_PERCENTAGE_OF_WIDTH = 0.005
     IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH = 0.04
-    IN_HAND_HIDDEN_DISTANCE_PERCENTAGE_OF_WIDTH = 0.06
+    BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH = 0.10
 
     FALSE_SEEN_FRAMES_PATIENCE = 5
     EXPIRATION_FRAMES_PATIENCE = 20
@@ -25,16 +25,16 @@ class ObjectTracker:
         self.tracking_distance_threshold = int(ObjectTracker.MOVING_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width**1.4)**2
         self.moving_distance_threshold = int(ObjectTracker.MOVING_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
         self.in_hand_distance_threshold = int(ObjectTracker.IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
-        self.in_hand_hidden_distance_threshold = int(ObjectTracker.IN_HAND_HIDDEN_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
+        self.back_to_track_distance_threshold = int(ObjectTracker.BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
         
     def register_seen_objects(self, seen_yolo_objects, tips_midpoints):
         yolo_objects_to_track = list(seen_yolo_objects)
         already_tracked_object_ids = []
         
         # Visible objects logic
-        visible_objects = []
-        visible_objects_hands_distances = []
-        visible_objects_closest_hands = []
+        visible_tracked_objects = []
+        visible_tracked_objects_hands_distances = []
+        visible_tracked_objects_closest_hands = []
         visible_object_indices = []
         for i, yolo_object in enumerate(yolo_objects_to_track):
             closest_tracked_object, distance = self._get_closest_tracked_object(yolo_object, already_tracked_object_ids)
@@ -47,68 +47,65 @@ class ObjectTracker:
                     closest_tracked_object.is_visible = True
                     closest_tracked_object.is_moving = False if distance < self.moving_distance_threshold else True
 
-                    visible_objects.append(closest_tracked_object)
+                    visible_tracked_objects.append(closest_tracked_object)
                     right_hand_distance = self._get_distance_between_object_centers(tips_midpoints[0], closest_tracked_object.yolo_object.get_center())
                     left_hand_distance = self._get_distance_between_object_centers(tips_midpoints[1], closest_tracked_object.yolo_object.get_center())
                     if right_hand_distance <= left_hand_distance:
-                        visible_objects_hands_distances.append(right_hand_distance)
-                        visible_objects_closest_hands.append(0)
+                        visible_tracked_objects_hands_distances.append(right_hand_distance)
+                        visible_tracked_objects_closest_hands.append(0)
                     else:
-                        visible_objects_hands_distances.append(left_hand_distance)
-                        visible_objects_closest_hands.append(1)
+                        visible_tracked_objects_hands_distances.append(left_hand_distance)
+                        visible_tracked_objects_closest_hands.append(1)
 
                     already_tracked_object_ids.append(closest_tracked_object.tracker_id)
                     visible_object_indices.append(i)
 
         for i in sorted(visible_object_indices, reverse=True):
             yolo_objects_to_track.pop(i)
-        
-        right_hand_tracked_object_visible = False
-        for i in np.argsort(visible_objects_hands_distances):
-            if visible_objects_hands_distances[i] < self.in_hand_distance_threshold:
-                if visible_objects_closest_hands[i] == 0:
-                    in_hand_visible_tracked_object = visible_objects[i]
-                    if self.right_hand_tracked_object is not None and self.right_hand_tracked_object.tracker_id == in_hand_visible_tracked_object.tracker_id:
+
+        # Hand association
+        for i in np.argsort(visible_tracked_objects_hands_distances):
+            if visible_tracked_objects_hands_distances[i] < self.in_hand_distance_threshold:
+                if visible_tracked_objects_closest_hands[i] == 0:
+                    in_hand_visible_tracked_object = visible_tracked_objects[i]
+                    if self.right_hand_tracked_object is not None and self.right_hand_tracked_object.tracker_id == in_hand_visible_tracked_object.tracker_id: # Object already in the hand
                         if self.right_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
                             self.right_hand_tracked_object.in_hand_frames_persistence += 1
-                    elif self.right_hand_tracked_object is None or self.right_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
+                        break
+                    elif self.right_hand_tracked_object is None or self.right_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE: # New object in the hand
                         self.right_hand_tracked_object = in_hand_visible_tracked_object
-                        if self.right_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
-                            self.right_hand_tracked_object.in_hand_frames_persistence += 1
-                    right_hand_tracked_object_visible = True
-                    break
+                        self.right_hand_tracked_object.in_hand_frames_persistence = 1
+                        break
             else:
                 break
-        if not right_hand_tracked_object_visible and self.right_hand_tracked_object is not None and self.right_hand_tracked_object.is_visible:
-            self.right_hand_tracked_object.in_hand_frames_persistence = 0
-            self.right_hand_tracked_object = None
 
-        left_hand_tracked_object_visible = False
-        for i in np.argsort(visible_objects_hands_distances):
-            if visible_objects_hands_distances[i] < self.in_hand_distance_threshold:
-                if visible_objects_closest_hands[i] == 1:
-                    in_hand_visible_tracked_object = visible_objects[i]
-                    if self.left_hand_tracked_object is not None and self.left_hand_tracked_object.tracker_id == in_hand_visible_tracked_object.tracker_id:
+        for i in np.argsort(visible_tracked_objects_hands_distances):
+            if visible_tracked_objects_hands_distances[i] < self.in_hand_distance_threshold:
+                if visible_tracked_objects_closest_hands[i] == 1:
+                    in_hand_visible_tracked_object = visible_tracked_objects[i]
+                    if self.left_hand_tracked_object is not None and self.left_hand_tracked_object.tracker_id == in_hand_visible_tracked_object.tracker_id: # Object already in the hand
                         if self.left_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
                             self.left_hand_tracked_object.in_hand_frames_persistence += 1
-                    elif self.left_hand_tracked_object is None or self.left_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
+                        break
+                    elif self.left_hand_tracked_object is None or self.left_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE: # New object in the hand
                         self.left_hand_tracked_object = in_hand_visible_tracked_object
-                        if self.left_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
-                            self.left_hand_tracked_object.in_hand_frames_persistence += 1
-                    left_hand_tracked_object_visible = True
-                    break
+                        self.left_hand_tracked_object.in_hand_frames_persistence = 1
+                        break
             else:
                 break
-        if not left_hand_tracked_object_visible and self.left_hand_tracked_object is not None and self.left_hand_tracked_object.is_visible:
-            self.left_hand_tracked_object.in_hand_frames_persistence = 0
-            self.left_hand_tracked_object = None
 
-        # Back to track from hand hide logic (or create new tracked object)
+        # Back to track from hand hide logic or create a new tracked object
         for yolo_object in yolo_objects_to_track:
             back_to_track_tracked_object = None
-            if self.right_hand_tracked_object is not None and not self.right_hand_tracked_object.is_visible and self.right_hand_tracked_object.yolo_object.label_id == yolo_object.label_id:
+            if self.right_hand_tracked_object is not None \
+               and not self.right_hand_tracked_object.is_visible \
+               and self._get_distance_between_object_centers(tips_midpoints[0], yolo_object.get_center()) < self.back_to_track_distance_threshold \
+               and self.right_hand_tracked_object.yolo_object.label_id == yolo_object.label_id:
                 back_to_track_tracked_object = self.right_hand_tracked_object
-            elif self.left_hand_tracked_object is not None and not self.left_hand_tracked_object.is_visible and self.left_hand_tracked_object.yolo_object.label_id == yolo_object.label_id:
+            elif self.left_hand_tracked_object is not None \
+               and not self.left_hand_tracked_object.is_visible \
+               and self._get_distance_between_object_centers(tips_midpoints[1], yolo_object.get_center()) < self.back_to_track_distance_threshold \
+               and self.left_hand_tracked_object.yolo_object.label_id == yolo_object.label_id:
                 back_to_track_tracked_object = self.left_hand_tracked_object
 
             if back_to_track_tracked_object is not None:
@@ -147,7 +144,7 @@ class ObjectTracker:
 
         if self.right_hand_tracked_object is None or self.right_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
             for i in np.argsort(hidden_objects_hands_distances):
-                if hidden_objects_hands_distances[i] < self.in_hand_hidden_distance_threshold:
+                if hidden_objects_hands_distances[i] < self.in_hand_distance_threshold:
                     if hidden_objects_closest_hands[i] == 0:
                         self.right_hand_tracked_object = hidden_objects[i]
                         if self.right_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
@@ -157,7 +154,7 @@ class ObjectTracker:
                     break
         if self.left_hand_tracked_object is None or self.left_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
             for i in np.argsort(hidden_objects_hands_distances):
-                if hidden_objects_hands_distances[i] < self.in_hand_hidden_distance_threshold:
+                if hidden_objects_hands_distances[i] < self.in_hand_distance_threshold:
                     if hidden_objects_closest_hands[i] == 1:
                         self.left_hand_tracked_object = hidden_objects[i]
                         if self.left_hand_tracked_object.in_hand_frames_persistence < ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE:
@@ -166,9 +163,45 @@ class ObjectTracker:
                 else:
                     break
 
+        # Hand release logic
+        if self.right_hand_tracked_object is not None \
+           and self.right_hand_tracked_object.is_visible \
+           and self._get_distance_between_object_centers(tips_midpoints[0], self.right_hand_tracked_object.yolo_object.get_center()) >= self.in_hand_distance_threshold:
+            self.right_hand_tracked_object.in_hand_frames_persistence = 0
+            self.right_hand_tracked_object = None
+
+        if self.left_hand_tracked_object is not None \
+           and self.left_hand_tracked_object.is_visible \
+           and self._get_distance_between_object_centers(tips_midpoints[1], self.left_hand_tracked_object.yolo_object.get_center()) >= self.in_hand_distance_threshold:
+            self.left_hand_tracked_object.in_hand_frames_persistence = 0
+            self.left_hand_tracked_object = None
+
     def increment_frame_index(self):
         self._check_false_seen_and_expiration()
         self.frame_index += 1
+
+    def force_object_in_hand(self, hand_index, reference_tracked_object):
+        """hand_index: 0 = right, 1 = left"""
+        tracked_object = self.get_tracked_object_by_id(reference_tracked_object.tracker_id)
+        if tracked_object is None:
+            for i in range(len(self.expired_objects)):
+                if self.expired_objects[i].tracker_id == reference_tracked_object.tracker_id:
+                    tracked_object = self.expired_objects.pop(i)
+                    self.tracked_objects.append(tracked_object)
+                    break
+        if tracked_object is None:
+            print("Error: No expired object can be found with specified tracker id.")
+            return
+        
+        tracked_object.last_seen_frame_index = self.frame_index
+        tracked_object.frames_persistence = max(tracked_object.frames_persistence, ObjectTracker.FALSE_SEEN_FRAMES_PATIENCE)
+        tracked_object.in_hand_frames_persistence = max(tracked_object.in_hand_frames_persistence, ObjectTracker.STABLE_IN_HAND_FRAMES_PATIENCE)
+        tracked_object.is_visible = False
+        tracked_object.is_moving = True
+        if hand_index == 0:
+            self.right_hand_tracked_object = tracked_object
+        elif hand_index == 1:
+            self.left_hand_tracked_object = tracked_object
 
     def get_tracked_object_by_id(self, tracker_id):
         for tracked_object in self.tracked_objects:
@@ -224,8 +257,12 @@ class ObjectTracker:
                 expired_object_indices.append(i)
         for i in sorted(expired_object_indices, reverse=True):
             expired_object = self.tracked_objects.pop(i)
-            if self.right_hand_tracked_object is not None and self.right_hand_tracked_object.tracker_id == expired_object.tracker_id:
-                self.right_hand_tracked_object = None
-            elif self.left_hand_tracked_object is not None and self.left_hand_tracked_object.tracker_id == expired_object.tracker_id:
-                self.left_hand_tracked_object = None
             self.expired_objects.append(expired_object)
+
+        tracked_object_tracker_ids = []
+        for tracked_object in self.tracked_objects:
+            tracked_object_tracker_ids.append(tracked_object.tracker_id)
+        if self.right_hand_tracked_object is not None and self.right_hand_tracked_object.tracker_id not in tracked_object_tracker_ids:
+            self.right_hand_tracked_object = None
+        elif self.left_hand_tracked_object is not None and self.left_hand_tracked_object.tracker_id not in tracked_object_tracker_ids:
+            self.left_hand_tracked_object = None
