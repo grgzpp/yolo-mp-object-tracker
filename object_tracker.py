@@ -3,9 +3,10 @@ import numpy as np
 from tracked_object import TrackedObject
 
 class ObjectTracker:
-    MOVING_DISTANCE_PERCENTAGE_OF_WIDTH = 0.005
-    IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH = 0.04
-    BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH = 0.10
+    TRACKING_DISTANCE_PERCENTAGE_OF_WIDTH = 0.08
+    MOVING_DISTANCE_PERCENTAGE_OF_WIDTH = 0.01
+    IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH = 0.05
+    BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH = 0.15
 
     FALSE_SEEN_FRAMES_PATIENCE = 5
     EXPIRATION_FRAMES_PATIENCE = 20
@@ -22,7 +23,7 @@ class ObjectTracker:
         self.right_hand_tracked_object = None
         self.left_hand_tracked_object = None
 
-        self.tracking_distance_threshold = int(ObjectTracker.MOVING_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width**1.4)**2
+        self.tracking_distance_threshold = int(ObjectTracker.TRACKING_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
         self.moving_distance_threshold = int(ObjectTracker.MOVING_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
         self.in_hand_distance_threshold = int(ObjectTracker.IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2
         self.back_to_track_distance_threshold = int(ObjectTracker.BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH*self.image_width)**2

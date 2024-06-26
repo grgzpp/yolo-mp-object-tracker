@@ -95,6 +95,7 @@ left_hand_tracked_object = object_tracker.left_hand_tracked_object
 
 ### ObjectTracker
 
+- `TRACKING_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for tracking objects, as a percentage of image width.
 - `MOVING_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for detecting movement, as a percentage of image width.
 - `IN_HAND_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for detecting objects in hand, as a percentage of image width.
 - `BACK_TO_TRACK_DISTANCE_PERCENTAGE_OF_WIDTH`: Distance threshold for tracking back object after being hidden by the hand manipulating it, as a percentage of image width.
