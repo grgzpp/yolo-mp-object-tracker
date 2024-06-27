@@ -100,12 +100,12 @@ class ObjectTracker:
             back_to_track_tracked_object = None
             if self.right_hand_tracked_object is not None \
                and not self.right_hand_tracked_object.is_visible \
-               and self._get_distance_between_object_centers(tips_midpoints[0], yolo_object.get_center()) < self.back_to_track_distance_threshold \
+               and (not any(tips_midpoints[0]) or self._get_distance_between_object_centers(tips_midpoints[0], yolo_object.get_center()) < self.back_to_track_distance_threshold) \
                and self.right_hand_tracked_object.yolo_object.label_id == yolo_object.label_id:
                 back_to_track_tracked_object = self.right_hand_tracked_object
             elif self.left_hand_tracked_object is not None \
                and not self.left_hand_tracked_object.is_visible \
-               and self._get_distance_between_object_centers(tips_midpoints[1], yolo_object.get_center()) < self.back_to_track_distance_threshold \
+               and (not any(tips_midpoints[1]) or self._get_distance_between_object_centers(tips_midpoints[1], yolo_object.get_center()) < self.back_to_track_distance_threshold) \
                and self.left_hand_tracked_object.yolo_object.label_id == yolo_object.label_id:
                 back_to_track_tracked_object = self.left_hand_tracked_object
 
@@ -119,8 +119,16 @@ class ObjectTracker:
                 
                 already_tracked_object_ids.append(back_to_track_tracked_object.tracker_id)
             else:
-                new_tracked_object = self._register_new_tracked_object(yolo_object)
-                already_tracked_object_ids.append(new_tracked_object.tracker_id)
+                double_detected_object = False
+                for tracked_object in self.tracked_objects:
+                    if tracked_object.tracker_id in already_tracked_object_ids and tracked_object.yolo_object.label_id == yolo_object.label_id and tracked_object.frames_persistence >= ObjectTracker.FALSE_SEEN_FRAMES_PATIENCE:
+                        distance = self._get_distance_between_object_centers(tracked_object.yolo_object.get_center(), yolo_object.get_center())
+                        if distance < self.tracking_distance_threshold:
+                            double_detected_object = True
+                            break
+                if not double_detected_object:
+                    new_tracked_object = self._register_new_tracked_object(yolo_object)
+                    already_tracked_object_ids.append(new_tracked_object.tracker_id)
         
         # Hidden objects logic (possible hidden from hand track logic)
         hidden_objects = []
@@ -165,13 +173,15 @@ class ObjectTracker:
                     break
 
         # Hand release logic
-        if self.right_hand_tracked_object is not None \
+        if any(tips_midpoints[0]) \
+           and self.right_hand_tracked_object is not None \
            and self.right_hand_tracked_object.is_visible \
            and self._get_distance_between_object_centers(tips_midpoints[0], self.right_hand_tracked_object.yolo_object.get_center()) >= self.in_hand_distance_threshold:
             self.right_hand_tracked_object.in_hand_frames_persistence = 0
             self.right_hand_tracked_object = None
 
-        if self.left_hand_tracked_object is not None \
+        if any(tips_midpoints[1]) \
+           and self.left_hand_tracked_object is not None \
            and self.left_hand_tracked_object.is_visible \
            and self._get_distance_between_object_centers(tips_midpoints[1], self.left_hand_tracked_object.yolo_object.get_center()) >= self.in_hand_distance_threshold:
             self.left_hand_tracked_object.in_hand_frames_persistence = 0
